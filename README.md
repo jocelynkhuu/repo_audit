@@ -8,12 +8,17 @@ The system operates in distinct phases:
 3. **Analysis:** Static analysis tools (e.g., regex, pattern matching) are run against the code.
 4. **Reporting:** Results are aggregated and presented to the user.
 
+### Pre-requisites
+1. Podman
+2. Ollama
+
 ## 🚀 Usage Guide
 1. `podman build -t secure-audit-image -f alpine_linux_Dockerfile.yaml`
 2. `podman run -d --name repo-auditor --cap-drop=ALL --security-opt=no-new-privileges:true --read-only --mount type=tmpfs,destination=/home/auditoruser/analysis,tmpfs-mode=1777,tmpfs-size=512M secure-audit-image`
 3. `podman exec -it repo-auditor git clone --depth 1 <REPLACE_WITH_GIT_URL>`
 4. `podman network disconnect podman repo-auditor`
-5. Update the `TARGET_DIR` in both `evaluate_code.sh` and `yara_rule_check.sh`
+5. Update the `TARGET_DIR` in both `evaluate_code.sh` and `yara_rule_check.sh` (or the MODEL in `evaluate_code.sh`)
+  - can run `./evaluate_code.sh bash deepseek-coder:latest` to specify a directory at $1 and model at $2
 6. `podman rm -f repo-auditor`
 
 ## What does this do?

@@ -1,17 +1,25 @@
 #!/bin/bash
 CONTAINER_NAME="repo-auditor"
-MODEL="deepseek-coder:1.3b"  # Explicit tag to prevent auto-manifest checks
-TARGET_DIR="/home/auditoruser/analysis/bash"
+
+# Set defaults if arguments are missing
+# If $1 is empty, default to "python". If $2 is empty, default to "qwen2.5:3b"
+DIR_NAME="${1:-python}"
+MODEL="${2:-qwen2.5:3b}"
+
+TARGET_DIR="/home/auditoruser/analysis/$DIR_NAME"
 
 echo "=================================================="
 echo "    🔍 STARTING AI SOURCE CODE ANALYSIS          "
 echo "=================================================="
+echo "[*] Target Directory: $TARGET_DIR"
+echo "[*] Evaluation Model: $MODEL"
+echo "--------------------------------------------------"
 
 # 1. Grab all relevant code files
-ALL_FILES=$(podman exec $CONTAINER_NAME find "$TARGET_DIR" -type f -not -path '*/.*' -not -name '*.md')
+ALL_FILES=$(podman exec $CONTAINER_NAME find "$TARGET_DIR" -type f -not -path '*/.*' -not -name '*.md' 2>/dev/null)
 
 if [ -z "$ALL_FILES" ]; then
-    echo "[-] Error: No source files found in $TARGET_DIR"
+    echo "[-] Error: No source files found in $TARGET_DIR. Check your folder name."
     exit 1
 fi
 
@@ -33,16 +41,18 @@ echo -e "[*] Generating concise audit summary...\n"
 
 # 4. Execute with strict output parameters forced on the LLM
 ollama run $MODEL <<-EOF
-You are an expert AppSec and Malware Reverse Engineer. Analyze the provided codebase.
-
-CRITICAL INSTRUCTIONS:
-- Your response must be strictly LESS THAN 10 SENTENCES total.
-- Do not list or summarize the filenames in your answer (the user can already see them).
-- If the repository contains no malicious patterns, your response must start with the exact phrase: "VERDICT: NO MALICIOUS CODE DETECTED." followed by a brief summary of what the code normally does.
-- If it is dangerous, start with "VERDICT: MALICIOUS PAYLOAD DETECTED" and explicitly name the high-risk lines.
-
 ---
-REPOSITORY CODE EXTRANEOUS CONTEXT:
+[SYSTEM INSTRUCTION]
+You are a non-conversational security engine. Do not talk to the user. Do not explain the code. Do not write markdown headings.
+
+[CODEBASE CONTEXT]
 $REPO_CONTEXT
+
+[REQUIRED TASK]
+Analyze the CODEBASE CONTEXT above for backdoors or malicious hooks. Respond ONLY with the formatting layout below.
+
+EXPECTED OUTPUT FORMAT:
+VERDICT: [NO MALICIOUS CODE DETECTED / MALICIOUS PAYLOAD DETECTED]
+SUMMARY: [Write exactly one sentence explaining the code function]
 EOF
 echo -e "\n=================================================="
