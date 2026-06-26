@@ -41,7 +41,6 @@ The entire operating system of the container is locked down like a read-only CD-
 ### Example:
 
 ```bash
-~/github/dockerfile_yamls
 ❯ podman build -t secure-audit-image -f alpine_linux_Dockerfile.yaml
 STEP 1/7: FROM alpine:latest
 Resolved "alpine" as an alias (/etc/containers/registries.conf.d/000-shortnames.conf)
@@ -90,11 +89,9 @@ COMMIT secure-audit-image
 Successfully tagged localhost/secure-audit-image:latest
 f5033b59e95d78ccf44ddbe57025c1ff0c804084b6401f442bd0c4a5104b7d98
 
-~/github/dockerfile_yamls                                                                 4s
 ❯ podman run -d --name repo-auditor --cap-drop=ALL --security-opt=no-new-privileges:true --read-only --mount type=tmpfs,destination=/home/auditoruser/analysis,tmpfs-mode=1777,tmpfs-size=512M secure-audit-image
 c421473477327f3fdcdfd50902fbf85fa58390b2ea755f842f97d89350a8db30
 
-~/github/dockerfile_yamls
 ❯ podman exec -it repo-auditor git clone --depth 1 https://github.com/jocelynkhuu/bash.git
 Cloning into 'bash'...
 remote: Enumerating objects: 10, done.
@@ -103,10 +100,8 @@ remote: Compressing objects: 100% (8/8), done.
 remote: Total 10 (delta 0), reused 2 (delta 0), pack-reused 0 (from 0)
 Receiving objects: 100% (10/10), done.
 
-~/github/dockerfile_yamls
 ❯ podman network disconnect podman repo-auditor
 
-~/github/dockerfile_yamls
 ❯ bash evaluate_code.sh
 ==================================================
     🔍 STARTING AI SOURCE CODE ANALYSIS
@@ -148,7 +143,6 @@ error: could not open file: /home/noroot/rules/webshells.yar
 [+] Scan Complete. If no output appeared above, the repo is clean.
 ==================================================
 
-~/github/dockerfile_yamls
 ❯ podman images
 REPOSITORY                         TAG         IMAGE ID      CREATED        SIZE
 localhost/secure-audit-image       latest      f5033b59e95d  2 minutes ago  40.7 MB
@@ -156,7 +150,6 @@ docker.io/library/alpine           latest      1991bd789d71  10 days ago    8.95
 localhost/fedora_custom_image      latest      b19a03b1bb0a  6 weeks ago    348 MB
 registry.fedoraproject.org/fedora  latest      de8e91948e78  6 weeks ago    199 MB
 
-~/github/dockerfile_yamls
 ❯ podman ps -a
 CONTAINER ID  IMAGE                                 COMMAND         CREATED        STATUS                   PORTS       NAMES
 de26fbef6ed1  localhost/fedora_custom_image:latest  /usr/bin/zsh    6 weeks ago    Exited (0) 6 weeks ago               fedora_playground
