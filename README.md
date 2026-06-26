@@ -1,5 +1,7 @@
 # 🛡️ Repository Auditor
 
+> Note: Created with the help of ✨ _**AI**_ 🤖 This was created for my personal use. Please use with caution and always double-check what you are executing or running on your computer and never run untrusted scripts/software.
+
 This project provides an isolated, and resource-efficient environment for analyzing code. It leverages containerization to ensure that analysis performed remains sandboxed from the host system.
 
 The system operates in distinct phases:
@@ -13,12 +15,14 @@ The system operates in distinct phases:
 2. Ollama (By default uses the model `qwen2.5:3b`)
     - Ex. `ollama pull deepseek-coder:latest` or `ollama pull qwen2.5:3b`
 
+NOTE: The AI analysis of the code is only as good as the model that is evaluating it. AI is not always accurate. Please always verify before running/executing anything on your computer.
+
 ## Scripts Included
 ### 1. `build_container.sh`
 
 This script helps to build the isolated container first deleting an existing running container with the `repo-auditor` name, building a new image named `secure-audit-image` from the `alpine_linux_Dockerfile.yaml` file and running the newly built image as a detached container called `repo-auditor`. It also applies hardening techniques during the build by dropping all Linux capabilities, making the filesystem read-only by default, mounting a temporary filesystem (tmpfs) so that it is wiped when the container stops, and preventing the process from gaining new privileges.
 
-It then prompts the user to enter a Git URL (ex. https://github.com/user/my-repo.git) and then clones that repo in the container in the temp directory. 
+It then prompts the user to enter a Git URL (ex. https://github.com/jocelynkhuu/codeinplace.git) and clones that repo in the container in the temp directory. 
 
 After cloning the repo, it disconnects the container's network interface.
 
