@@ -1,4 +1,4 @@
-# 🛡️ Repository Auditor
+# 🛡️ Basic Repo Auditor
 
 > Note: Created with the help of ✨ _**AI**_ 🤖 This was created for my own personal use for fun and learning purposes. Please use with caution and always double-check what you are executing or running on your computer and never run untrusted scripts/software.
 
