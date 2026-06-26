@@ -11,7 +11,7 @@ The system operates in distinct phases:
 ### Pre-requisites
 1. Podman
 2. Ollama
-    - `ollama pull deepseek-coder:latest` or `ollama pull qwen2.5:3b`
+    - Ex. `ollama pull deepseek-coder:latest` or `ollama pull qwen2.5:3b`
 
 ## 🚀 Usage Guide
 1. `podman build -t secure-audit-image -f alpine_linux_Dockerfile.yaml`
@@ -29,6 +29,8 @@ This is static analysis scanner designed to spot common malware indicators insid
 It boots up the yara engine inside the container and feeds it the webshells.yar signature file (compiled by Florian Roth).
 
 YARA sweeps through every file, checking the raw text structure against known cryptographic strings and behaviors tied to web shells, backdoor entry points, and common obfuscation templates. If it finds a match, it prints the exact filename and the rule it tripped.
+
+It also runs Trufflehog to scan for secrets that match known patterns. 
 
 ### `evaluate_code.sh`
 
