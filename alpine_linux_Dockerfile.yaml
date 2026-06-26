@@ -1,0 +1,25 @@
+# 1. Use a lightweight, explicit base image version
+FROM alpine:latest
+
+# 2. Install security tools and clean package cache in a single layer
+RUN apk add --no-cache \
+    git \
+    bash \
+    yara \
+    curl \
+    jq
+
+# 3. Create a secure system group and user with matching IDs
+RUN addgroup -S auditorgroup && adduser -S auditoruser -G auditorgroup
+
+# 4. Create paths and set up the YARA signatures securely
+WORKDIR /home/auditoruser/analysis
+RUN mkdir -p /home/auditoruser/rules && \
+    curl -sL "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/gen_webshells.yar" -o /home/auditoruser/rules/webshells.yar && \
+    chown -R auditoruser:auditorgroup /home/auditoruser
+
+# 5. Drop privileges to the non-root user
+USER auditoruser
+
+# 6. Keep container alive for background exec commands
+CMD ["sleep", "infinity"]
