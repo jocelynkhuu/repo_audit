@@ -25,6 +25,7 @@ podman run -d \
 1. Rootless Podman (The Ultimate Guardrail)
 
 Because you are using Podman on a Mac, the container runs inside a rootless Linux virtual machine. Even if the malware finds a mythical zero-day exploit to break out of the container, it only escapes into a locked-down, unprivileged user account inside the VM. It still cannot touch your actual macOS filesystem or host processes.
+
 2. `--cap-drop=ALL` & `--security-opt=no-new-privileges:true`
 
 Linux malware often tries to escape by exploiting vulnerabilities to gain root (kernel privileges).
@@ -133,8 +134,6 @@ notify users about upcoming macOS updates/deprecations and cleanup of previous u
 
 
 ==================================================
-
-~/github/dockerfile_yamls                                                                 4s
 ❯ bash yara_rule_check.sh
 ==================================================
    ⚡ RUNNING LIGHTWEIGHT MALWARE TRIAGE ⚡
