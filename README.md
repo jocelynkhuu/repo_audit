@@ -1,6 +1,6 @@
 # 🛡️ Repository Auditor
 
-This project provides an isolated, and resource-efficient environment for analyzing code submissions without risk. It leverages containerization to ensure that any analysis performed remains sandboxed from the host system.
+This project provides an isolated, and resource-efficient environment for analyzing code. It leverages containerization to ensure that analysis performed remains sandboxed from the host system.
 
 The system operates in distinct phases:
 1. **Initialization:** A clean, minimal container image is built using `alpine:latest`.
@@ -10,10 +10,35 @@ The system operates in distinct phases:
 
 ### Pre-requisites
 1. Podman
-2. Ollama
+2. Ollama (By default uses the model `qwen2.5:3b`)
     - Ex. `ollama pull deepseek-coder:latest` or `ollama pull qwen2.5:3b`
 
-## 🚀 Usage Guide
+## Scripts Included
+### 1. `build_container.sh`
+
+This script helps to build the isolated container first deleting an existing running container with the `repo-auditor` name, building a new image named `secure-audit-image` from the `alpine_linux_Dockerfile.yaml` file and running the newly built image as a detached container called `repo-auditor`. It also applies hardening techniques during the build by dropping all Linux capabilities, making the filesystem read-only by default, mounting a temporary filesystem (tmpfs) so that it is wiped when the container stops, and preventing the process from gaining new privileges.
+
+It then prompts the user to enter a Git URL (ex. https://github.com/user/my-repo.git) and then clones that repo in the container in the temp directory. 
+
+After cloning the repo, it disconnects the container's network interface.
+
+### 2. `yara_rule_check.sh`
+
+This script runs a static analysis designed to spot common malware indicators inside an isolated folder before inspecting the code deeper.
+
+It boots up the yara engine inside the container and feeds it the webshells.yar signature file (compiled by Florian Roth).
+
+YARA sweeps through every file, checking the raw text structure against known cryptographic strings and behaviors tied to web shells, backdoor entry points, and common obfuscation templates. If it finds a match, it prints the exact filename and the rule it tripped.
+
+It also runs Trufflehog to scan for secrets that match known patterns. 
+
+### 3. `evaluate_code.sh`
+
+This an automated AI-driven source code auditor. It acts as a bridge that safely reaches into the isolated container, grabs all the source files, packages them together into a single structured text payload, and streams them directly into Ollama's local AI model for a context-aware malware review.
+
+## 🚀 Manually building from Dockerfile
+To manually build the image and create the container from the image, the manual steps are here. This is automated in `build_container.sh` and the container can be spun up with different settings in Step 2. 
+
 1. `podman build -t secure-audit-image -f alpine_linux_Dockerfile.yaml`
 2. `podman run -d --name repo-auditor --cap-drop=ALL --security-opt=no-new-privileges:true --read-only --mount type=tmpfs,destination=/home/auditoruser/analysis,tmpfs-mode=1777,tmpfs-size=512M secure-audit-image`
 3. `podman exec -it repo-auditor git clone --depth 1 <REPLACE_WITH_GIT_URL>`
@@ -22,60 +47,22 @@ The system operates in distinct phases:
     - can run `./evaluate_code.sh bash` or `./evaluate_code.sh bash deepseek-coder:latest` to specify a directory at $1 and model at $2 (Defaults to using qwen2.5:3b and a directory called "python")
 6. `podman rm -f repo-auditor`
 
-### `yara_rule_check.sh`
-
-This is static analysis scanner designed to spot common malware indicators inside an isolated folder before you inspect the code any deeper.
-
-It boots up the yara engine inside the container and feeds it the webshells.yar signature file (compiled by Florian Roth).
-
-YARA sweeps through every file, checking the raw text structure against known cryptographic strings and behaviors tied to web shells, backdoor entry points, and common obfuscation templates. If it finds a match, it prints the exact filename and the rule it tripped.
-
-It also runs Trufflehog to scan for secrets that match known patterns. 
-
-### `evaluate_code.sh`
-
-This an automated AI-driven source code auditor. It acts as a bridge that safely reaches into your isolated Podman container, grabs all the source files, packages them together into a single structured text payload, and streams them directly into your local AI model (Ollama) for a context-aware malware review.
-
-
-### FAQ
-#### What does this do?
-```bash
-podman run -d \
-  --name repo-auditor \
-  --cap-drop=ALL \
-  --security-opt=no-new-privileges:true \
-  --read-only \
-  --mount type=tmpfs,destination=/home/auditoruser/analysis,tmpfs-mode=1777,tmpfs-size=512M \
-  secure-audit-image
-```
-
-1. Rootless Podman (The Ultimate Guardrail)
-
-Because you are using Podman on a Mac, the container runs inside a rootless Linux virtual machine. Even if the malware finds a mythical zero-day exploit to break out of the container, it only escapes into a locked-down, unprivileged user account inside the VM. It still cannot touch your actual macOS filesystem or host processes.
-
-2. `--cap-drop=ALL` & `--security-opt=no-new-privileges:true`
-
-Linux malware often tries to escape by exploiting vulnerabilities to gain root (kernel privileges).
-
-  - `--cap-drop=ALL` - strips away raw network control, raw disk access, and kernel modification capabilities.
-  - `--security-opt=no-new-privileges:true` - ensures that even if the malware runs a setuid binary or finds a vulnerability, Linux strictly forbids it from escalating past your low-privilege auditoruser.
-
-3. `--read-only` & `--mount type=tmpfs...`
-
-The entire operating system of the container is locked down like a read-only CD-ROM. If malware tries to infect system binaries, drop a persistent script in /etc, or modify the shell, the kernel blocks the write request. The only place it can write files is inside the 512MB RAM disk (tmpfs), which evaporates the second you kill the container.
-
 ### Example:
 
 ```bash
-❯ podman build -t secure-audit-image -f alpine_linux_Dockerfile.yaml
-STEP 1/7: FROM alpine:latest
+❯ ./build_container.sh
+==================================================
+   🛡️  INITIALIZING SECURE AUDIT SANDBOX
+==================================================
+[*] Building Podman Security Image...
+STEP 1/8: FROM alpine:latest
 Resolved "alpine" as an alias (/etc/containers/registries.conf.d/000-shortnames.conf)
 Trying to pull docker.io/library/alpine:latest...
 Getting image source signatures
 Copying blob sha256:5de55e5ef9c033997441461efe7ba23a986db059c0bb78b38f84ee0d72b99167
 Copying config sha256:1991bd789d7184290c3cce84fd6af068b8b745e9bddf178661ce7f5ecf68135c
 Writing manifest to image destination
-STEP 2/7: RUN apk add --no-cache     git     bash     yara     curl     jq
+STEP 2/8: RUN apk add --no-cache     git     bash     yara     curl     jq
 ( 1/21) Installing ncurses-terminfo-base (6.6_p20260516-r0)
 ( 2/21) Installing libncursesw (6.6_p20260516-r0)
 ( 3/21) Installing readline (8.3.3-r1)
@@ -100,101 +87,101 @@ STEP 2/7: RUN apk add --no-cache     git     bash     yara     curl     jq
 (21/21) Installing yara (4.5.7-r0)
 Executing busybox-1.37.0-r31.trigger
 OK: 38.0 MiB in 37 packages
---> d11398596d11
-STEP 3/7: RUN addgroup -S auditorgroup && adduser -S auditoruser -G auditorgroup
---> 8422c3307cb5
-STEP 4/7: WORKDIR /home/auditoruser/analysis
---> 3cbbef1adfe2
-STEP 5/7: RUN mkdir -p /home/auditoruser/rules &&     curl -sL "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/gen_webshells.yar" -o /home/auditoruser/rules/webshells.yar &&     chown -R auditoruser:auditorgroup /home/auditoruser
---> a5022d8472c3
-STEP 6/7: USER auditoruser
---> bcebc5f1109a
-STEP 7/7: CMD ["sleep", "infinity"]
+--> a8f90ca35ddb
+STEP 3/8: RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+trufflesecurity/trufflehog info checking GitHub for latest tag
+trufflesecurity/trufflehog info found version: 3.95.6 for v3.95.6/linux/arm64
+trufflesecurity/trufflehog info installed /usr/local/bin/trufflehog
+--> b621f51139b3
+STEP 4/8: RUN addgroup -S auditorgroup && adduser -S auditoruser -G auditorgroup
+--> 26f096983eb9
+STEP 5/8: WORKDIR /home/auditoruser/analysis
+--> 7d0ff63810ea
+STEP 6/8: RUN mkdir -p /home/auditoruser/rules &&     curl -sL "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/gen_webshells.yar" -o /home/auditoruser/rules/webshells.yar &&     chown -R auditoruser:auditorgroup /home/auditoruser
+--> efd557130c9f
+STEP 7/8: USER auditoruser
+--> 97a5ffa83872
+STEP 8/8: CMD ["sleep", "infinity"]
 COMMIT secure-audit-image
---> f5033b59e95d
+--> 963cbd9534fe
 Successfully tagged localhost/secure-audit-image:latest
-f5033b59e95d78ccf44ddbe57025c1ff0c804084b6401f442bd0c4a5104b7d98
-```
-
-```bash
-❯ podman run -d --name repo-auditor --cap-drop=ALL --security-opt=no-new-privileges:true --read-only --mount type=tmpfs,destination=/home/auditoruser/analysis,tmpfs-mode=1777,tmpfs-size=512M secure-audit-image
-c421473477327f3fdcdfd50902fbf85fa58390b2ea755f842f97d89350a8db30
-```
-
-```bash
-❯ podman exec -it repo-auditor git clone --depth 1 https://github.com/jocelynkhuu/bash.git
-Cloning into 'bash'...
-remote: Enumerating objects: 10, done.
-remote: Counting objects: 100% (10/10), done.
-remote: Compressing objects: 100% (8/8), done.
-remote: Total 10 (delta 0), reused 2 (delta 0), pack-reused 0 (from 0)
-Receiving objects: 100% (10/10), done.
-
-❯ podman network disconnect podman repo-auditor
-```
-
-```bash
-❯ bash evaluate_code.sh
-==================================================
-    🔍 STARTING AI SOURCE CODE ANALYSIS
-==================================================
-[*] Verifying target directory contents (First 5 files):
-- /home/auditoruser/analysis/bash/add_printer_mac.sh
-- /home/auditoruser/analysis/bash/appointment_tracker.sh
-- /home/auditoruser/analysis/bash/deprecationnotifier.sh
-- /home/auditoruser/analysis/bash/jamf_recon.sh
-- /home/auditoruser/analysis/bash/update_hostname.sh
+963cbd9534fe058cc46658b230c6d7d4fe2f5dcd1a8da560d33612f2cf490599
+[*] Spawning unprivileged sandbox container...
+83989ccc765296ab2a8235129db7102d0068fe09e2b98c1c5af2deeb9c292a70
 --------------------------------------------------
-[*] Transmitting codebase to deepseek-coder:1.3b...
-[*] Generating concise audit summary...
+👉 Enter the untrusted repository Git URL: https://github.com/jocelynkhuu/codeinplace.git
+--------------------------------------------------
+[*] Securely cloning: https://github.com/jocelynkhuu/codeinplace.git
+Cloning into 'codeinplace'...
+remote: Enumerating objects: 8, done.
+remote: Counting objects: 100% (8/8), done.
+remote: Compressing objects: 100% (8/8), done.
+Receiving objects: 100% (8/8), done.
+remote: Total 8 (delta 0), reused 5 (delta 0), pack-reused 0 (from 0)
+[*] Severing container network interface...
+[*] Verifying network isolation status...
+✅ VERIFIED: Container network is completely dark.
+==================================================
+[+] Sandbox Initialization Complete!
+    - Destination directory inside container: /home/auditoruser/analysis/codeinplace
+    - Network Status: 🚫 DISCONNECTED (Safe to triage)
+==================================================
 
-VERDICT: NO MALICIOUS CODE DETECTED. The scripts provided in this codebase do not
-contain any malicious components, which is a key point of security for MacOS systems as
-it can be vulnerable to various attacks such as denial-of-service (DoS) and buffer
-overflows where the system could hang or crash if too much data was processed at once.
-
-The scripts also include features like appointment tracking in appointments CSV file, a
-launch agent for automatic reminders after installing DeprecationNotifier MacOS app to
-notify users about upcoming macOS updates/deprecations and cleanup of previous user's
-.appointmentdates.csv if required (using the latest version).
+Next steps to execute your triage tools:
+  ./yara_rule_check.sh codeinplace
+  ./evaluate_code.sh codeinplace
 ```
-
 ```bash
-❯ ./yara_rule_check.sh
+❯ ./yara_rule_check.sh codeinplace
 ==================================================
    ⚡ RUNNING LIGHTWEIGHT MALWARE TRIAGE ⚡
 ==================================================
-[*] Target Directory: /home/auditoruser/analysis/python
+[*] Target Directory: /home/auditoruser/analysis/codeinplace
 --------------------------------------------------
 [*] Verifying target directory contents (First 5 files):
-- /home/auditoruser/analysis/python/argparse_practice.py
-- /home/auditoruser/analysis/python/create_plist_script.py
-- /home/auditoruser/analysis/python/download_pdfs.py
-- /home/auditoruser/analysis/python/mac_setup.py
+- /home/auditoruser/analysis/codeinplace/README.md
+- /home/auditoruser/analysis/codeinplace/codeinplace_filter.py
+- /home/auditoruser/analysis/codeinplace/forest_fire.py
+- /home/auditoruser/analysis/codeinplace/khansole_academy.py
+- /home/auditoruser/analysis/codeinplace/liftoff.py
 --------------------------------------------------
 
 [*] Running YARA Backdoor & Webshell Scanner...
 
 [*] Checking for Suspicious Execution Hooks & Exfiltration...
-/home/auditoruser/analysis/python/mac_setup.py:306:    shell = os.environ['SHELL']
+
+[*] Running Deep Credential & Secret Verification Scan...
+🐷🔑🐷  TruffleHog. Unearth your secrets. 🐷🔑🐷
+
+2026-06-26T22:41:19Z	info-0	trufflehog	running source	{"source_manager_worker_id": "louMT", "with_units": true}
+2026-06-26T22:41:19Z	info-0	trufflehog	finished scanning	{"chunks": 34, "bytes": 35873, "verified_secrets": 0, "unverified_secrets": 0, "scan_duration": "3.381308ms", "trufflehog_version": "3.95.6", "verification_caching": {"Hits":0,"Misses":0,"HitsWasted":0,"AttemptsSaved":0,"VerificationTimeSpentMS":0}}
 
 ==================================================
 [+] Scan Complete. If no output appeared above, the repo is clean.
 ==================================================
 ```
-
 ```bash
-❯ podman images
-REPOSITORY                         TAG         IMAGE ID      CREATED        SIZE
-localhost/secure-audit-image       latest      f5033b59e95d  2 minutes ago  40.7 MB
-docker.io/library/alpine           latest      1991bd789d71  10 days ago    8.95 MB
-localhost/fedora_custom_image      latest      b19a03b1bb0a  6 weeks ago    348 MB
-registry.fedoraproject.org/fedora  latest      de8e91948e78  6 weeks ago    199 MB
-```
+❯ ./evaluate_code.sh codeinplace
+==================================================
+    🔍 STARTING AI SOURCE CODE ANALYSIS
+==================================================
+[*] Target Directory: /home/auditoruser/analysis/codeinplace
+[*] Evaluation Model: qwen2.5:3b
+--------------------------------------------------
+[*] Verifying target directory contents (First 5 files):
+- /home/auditoruser/analysis/codeinplace/codeinplace_filter.py
+- /home/auditoruser/analysis/codeinplace/forest_fire.py
+- /home/auditoruser/analysis/codeinplace/khansole_academy.py
+- /home/auditoruser/analysis/codeinplace/liftoff.py
+- /home/auditoruser/analysis/codeinplace/nimm.py
+--------------------------------------------------
+[*] Transmitting codebase to qwen2.5:3b...
+[*] Generating concise audit summary...
 
-```bash
-❯ podman ps -a
-CONTAINER ID  IMAGE                                 COMMAND         CREATED        STATUS                   PORTS       NAMES
-de26fbef6ed1  localhost/fedora_custom_image:latest  /usr/bin/zsh    6 weeks ago    Exited (0) 6 weeks ago               fedora_playground
-c42147347732  localhost/secure-audit-image:latest   sleep infinity  2 minutes ago  Up 2 minutes (starting)              repo-auditor
+VERDICT: NO MALICIOUS CODE DETECTED
+SUMMARY: The provided Python files do not contain any backdoors or malicious hooks;
+they are functional and safe for educational purposes.
+
+
+==================================================
 ```
