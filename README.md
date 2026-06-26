@@ -11,7 +11,7 @@ The system operates in distinct phases:
 ### Pre-requisites
 1. Podman
 2. Ollama
-  - `ollama pull deepseek-coder:latest` or `ollama pull qwen2.5:3b`
+    - `ollama pull deepseek-coder:latest` or `ollama pull qwen2.5:3b`
 
 ## 🚀 Usage Guide
 1. `podman build -t secure-audit-image -f alpine_linux_Dockerfile.yaml`
@@ -19,7 +19,7 @@ The system operates in distinct phases:
 3. `podman exec -it repo-auditor git clone --depth 1 <REPLACE_WITH_GIT_URL>`
 4. `podman network disconnect podman repo-auditor`
 5. Update the `TARGET_DIR` in both `evaluate_code.sh` and `yara_rule_check.sh` (or the MODEL in `evaluate_code.sh`)
-  - can run `./evaluate_code.sh bash` or `./evaluate_code.sh bash deepseek-coder:latest` to specify a directory at $1 and model at $2 (Defaults to using qwen2.5:3b and a directory called "python")
+    - can run `./evaluate_code.sh bash` or `./evaluate_code.sh bash deepseek-coder:latest` to specify a directory at $1 and model at $2 (Defaults to using qwen2.5:3b and a directory called "python")
 6. `podman rm -f repo-auditor`
 
 ## What does this do?
