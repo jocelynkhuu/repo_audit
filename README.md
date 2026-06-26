@@ -1,8 +1,14 @@
 # 🛡️ Repository Auditor
 
-This project contains the Dockerfile and scripts needed to create a lightweight Alpine Linux container that is segmented with a non-root user so malicious code cannot escalate and is sandboxed from the host.
+This project provides an isolated, and resource-efficient environment for analyzing code submissions without risk. It leverages containerization to ensure that any analysis performed remains sandboxed from the host system.
 
-To build this image
+The system operates in distinct phases:
+1. **Initialization:** A clean, minimal container image is built using `alpine:latest`.
+2. **Ingestion:** The target code is copied into the container's ephemeral filesystem.
+3. **Analysis:** Static analysis tools (e.g., regex, pattern matching) are run against the code.
+4. **Reporting:** Results are aggregated and presented to the user.
+
+## 🚀 Usage Guide
 1. `podman build -t secure-audit-image -f alpine_linux_Dockerfile.yaml`
 2. `podman run -d --name repo-auditor --cap-drop=ALL --security-opt=no-new-privileges:true --read-only --mount type=tmpfs,destination=/home/auditoruser/analysis,tmpfs-mode=1777,tmpfs-size=512M secure-audit-image`
 3. `podman exec -it repo-auditor git clone --depth 1 <REPLACE_WITH_GIT_URL>`
@@ -11,7 +17,6 @@ To build this image
 6. `podman rm -f repo-auditor`
 
 ## What does this do?
-
 ```bash
 podman run -d \
   --name repo-auditor \
@@ -125,8 +130,6 @@ The scripts also include features like appointment tracking in appointments CSV 
 launch agent for automatic reminders after installing DeprecationNotifier MacOS app to
 notify users about upcoming macOS updates/deprecations and cleanup of previous user's
 .appointmentdates.csv if required (using the latest version).
-
-
 
 ==================================================
 ❯ bash yara_rule_check.sh
