@@ -4,16 +4,17 @@
 
 This project provides an isolated, and resource-efficient environment for analyzing code. It leverages containerization to ensure that analysis performed remains sandboxed from the host system.
 
-The system operates in distinct phases:
+The project has scripts for different phases:
 1. **Initialization:** A clean, minimal container image is built using `alpine:latest`.
 2. **Ingestion:** The target code is copied into the container's ephemeral filesystem.
 3. **Analysis:** Static analysis tools (e.g., regex, pattern matching) are run against the code.
 4. **Reporting:** Results are aggregated and presented to the user.
 
 ### Pre-requisites
-1. Podman
-2. Ollama (By default uses the model `qwen2.5:3b`)
-    - Ex. `ollama pull deepseek-coder:latest` or `ollama pull qwen2.5:3b`
+Setup for Ollama and Podman are omitted and should be done in advance.
+1. Podman (https://podman.io/)
+2. Ollama (https://ollama.com/) 
+    - By default uses the model `qwen2.5:3b`
 
 NOTE: The AI analysis of the code is only as good as the model that is evaluating it. AI is not always accurate. Please always verify before running/executing anything on your computer.
 
