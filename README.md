@@ -35,9 +35,8 @@ Because you are using Podman on a Mac, the container runs inside a rootless Linu
 
 Linux malware often tries to escape by exploiting vulnerabilities to gain root (kernel privileges).
 
-    `--cap-drop=ALL` strips away raw network control, raw disk access, and kernel modification capabilities.
-
-    `no-new-privileges` ensures that even if the malware runs a setuid binary or finds a vulnerability, Linux strictly forbids it from escalating past your low-privilege auditoruser.
+  - `--cap-drop=ALL` - strips away raw network control, raw disk access, and kernel modification capabilities.
+  - `--security-opt=no-new-privileges:true` - ensures that even if the malware runs a setuid binary or finds a vulnerability, Linux strictly forbids it from escalating past your low-privilege auditoruser.
 
 3. `--read-only` & `--mount type=tmpfs...`
 
