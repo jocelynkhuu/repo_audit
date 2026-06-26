@@ -40,6 +40,10 @@ echo "$ALL_FILES" | xargs -I {} podman exec $CONTAINER_NAME grep -nHnE '(/dev/tc
 # Check for environmental variable or key scraping
 echo "$ALL_FILES" | xargs -I {} podman exec $CONTAINER_NAME grep -nHnE '(\.aws/credentials|\.ssh/id_|\.env|process\.env)' "{}" 2>/dev/null
 
+# 3. Deep Credential & Entropy Scan (Added --no-update)
+echo -e "\n[*] Running Deep Credential & Secret Verification Scan..."
+podman exec $CONTAINER_NAME trufflehog filesystem "$TARGET_DIR" --no-update --only-verified
+
 echo -e "\n=================================================="
 echo "[+] Scan Complete. If no output appeared above, the repo is clean."
 echo "=================================================="

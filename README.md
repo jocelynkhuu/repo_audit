@@ -22,7 +22,21 @@ The system operates in distinct phases:
     - can run `./evaluate_code.sh bash` or `./evaluate_code.sh bash deepseek-coder:latest` to specify a directory at $1 and model at $2 (Defaults to using qwen2.5:3b and a directory called "python")
 6. `podman rm -f repo-auditor`
 
-## What does this do?
+### `yara_rule_check.sh`
+
+This is static analysis scanner designed to spot common malware indicators inside an isolated folder before you inspect the code any deeper.
+
+It boots up the yara engine inside the container and feeds it the webshells.yar signature file (compiled by Florian Roth).
+
+YARA sweeps through every file, checking the raw text structure against known cryptographic strings and behaviors tied to web shells, backdoor entry points, and common obfuscation templates. If it finds a match, it prints the exact filename and the rule it tripped.
+
+### `evaluate_code.sh`
+
+This an automated AI-driven source code auditor. It acts as a bridge that safely reaches into your isolated Podman container, grabs all the source files, packages them together into a single structured text payload, and streams them directly into your local AI model (Ollama) for a context-aware malware review.
+
+
+### FAQ
+#### What does this do?
 ```bash
 podman run -d \
   --name repo-auditor \
@@ -98,10 +112,14 @@ COMMIT secure-audit-image
 --> f5033b59e95d
 Successfully tagged localhost/secure-audit-image:latest
 f5033b59e95d78ccf44ddbe57025c1ff0c804084b6401f442bd0c4a5104b7d98
+```
 
+```bash
 ❯ podman run -d --name repo-auditor --cap-drop=ALL --security-opt=no-new-privileges:true --read-only --mount type=tmpfs,destination=/home/auditoruser/analysis,tmpfs-mode=1777,tmpfs-size=512M secure-audit-image
 c421473477327f3fdcdfd50902fbf85fa58390b2ea755f842f97d89350a8db30
+```
 
+```bash
 ❯ podman exec -it repo-auditor git clone --depth 1 https://github.com/jocelynkhuu/bash.git
 Cloning into 'bash'...
 remote: Enumerating objects: 10, done.
@@ -111,7 +129,9 @@ remote: Total 10 (delta 0), reused 2 (delta 0), pack-reused 0 (from 0)
 Receiving objects: 100% (10/10), done.
 
 ❯ podman network disconnect podman repo-auditor
+```
 
+```bash
 ❯ bash evaluate_code.sh
 ==================================================
     🔍 STARTING AI SOURCE CODE ANALYSIS
@@ -135,29 +155,42 @@ The scripts also include features like appointment tracking in appointments CSV 
 launch agent for automatic reminders after installing DeprecationNotifier MacOS app to
 notify users about upcoming macOS updates/deprecations and cleanup of previous user's
 .appointmentdates.csv if required (using the latest version).
+```
 
-==================================================
-❯ bash yara_rule_check.sh
+```bash
+❯ ./yara_rule_check.sh
 ==================================================
    ⚡ RUNNING LIGHTWEIGHT MALWARE TRIAGE ⚡
 ==================================================
+[*] Target Directory: /home/auditoruser/analysis/python
+--------------------------------------------------
+[*] Verifying target directory contents (First 5 files):
+- /home/auditoruser/analysis/python/argparse_practice.py
+- /home/auditoruser/analysis/python/create_plist_script.py
+- /home/auditoruser/analysis/python/download_pdfs.py
+- /home/auditoruser/analysis/python/mac_setup.py
+--------------------------------------------------
 
 [*] Running YARA Backdoor & Webshell Scanner...
-error: could not open file: /home/noroot/rules/webshells.yar
 
 [*] Checking for Suspicious Execution Hooks & Exfiltration...
+/home/auditoruser/analysis/python/mac_setup.py:306:    shell = os.environ['SHELL']
 
 ==================================================
 [+] Scan Complete. If no output appeared above, the repo is clean.
 ==================================================
+```
 
+```bash
 ❯ podman images
 REPOSITORY                         TAG         IMAGE ID      CREATED        SIZE
 localhost/secure-audit-image       latest      f5033b59e95d  2 minutes ago  40.7 MB
 docker.io/library/alpine           latest      1991bd789d71  10 days ago    8.95 MB
 localhost/fedora_custom_image      latest      b19a03b1bb0a  6 weeks ago    348 MB
 registry.fedoraproject.org/fedora  latest      de8e91948e78  6 weeks ago    199 MB
+```
 
+```bash
 ❯ podman ps -a
 CONTAINER ID  IMAGE                                 COMMAND         CREATED        STATUS                   PORTS       NAMES
 de26fbef6ed1  localhost/fedora_custom_image:latest  /usr/bin/zsh    6 weeks ago    Exited (0) 6 weeks ago               fedora_playground

@@ -1,6 +1,6 @@
 FROM alpine:latest
 
-# Install security tools and clean package cache in a single layer
+# 1. Install official base security utilities via apk
 RUN apk add --no-cache \
     git \
     bash \
@@ -8,17 +8,20 @@ RUN apk add --no-cache \
     curl \
     jq
 
-# Create a secure system group and user with matching IDs
+# 2. Install TruffleHog via its official static binary script
+RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+# 3. Create a secure system group and user with matching IDs
 RUN addgroup -S auditorgroup && adduser -S auditoruser -G auditorgroup
 
-# Create paths and set up the YARA signatures securely
+# 4. Create paths and set up the YARA signatures securely
 WORKDIR /home/auditoruser/analysis
 RUN mkdir -p /home/auditoruser/rules && \
     curl -sL "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/gen_webshells.yar" -o /home/auditoruser/rules/webshells.yar && \
     chown -R auditoruser:auditorgroup /home/auditoruser
 
-# Drop privileges to the non-root user
+# 5. Drop privileges to the non-root user
 USER auditoruser
 
-# Keep container alive for background exec commands
+# 6. Keep container alive for background exec commands
 CMD ["sleep", "infinity"]
