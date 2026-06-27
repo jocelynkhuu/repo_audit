@@ -52,4 +52,4 @@ EXPECTED OUTPUT FORMAT:
 VERDICT: [NO MALICIOUS CODE DETECTED / MALICIOUS PAYLOAD DETECTED]
 SUMMARY: [Write exactly one sentence explaining the code function]
 EOF
-echo -e "\n=================================================="
+echo "=================================================="
