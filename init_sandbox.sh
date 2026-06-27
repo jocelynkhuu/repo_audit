@@ -67,3 +67,22 @@ echo "=================================================="
 echo -e "\nNext steps to execute your triage tools:"
 echo "  ./yara_rule_check.sh $REPO_DIR"
 echo "  ./evaluate_code.sh $REPO_DIR"
+echo "--------------------------------------------------"
+echo -n "👉 Would you like to run ./yara_rule_check.sh? (y/n): " 
+read -r RUN_YARA
+
+echo -n "👉 Would you like to run ./evaluate_code.sh? (y/n): "
+read -r RUN_EVAL
+
+echo "--------------------------------------------------"
+
+# The '^[Yy]' pattern matches any string starting with an uppercase Y or lowercase y
+if [[ "$RUN_YARA" =~ ^[Yy] && "$RUN_EVAL" =~ ^[Yy] ]]; then
+    bash yara_rule_check.sh "$REPO_DIR" && bash evaluate_code.sh "$REPO_DIR"
+elif [[ "$RUN_YARA" =~ ^[Yy] ]]; then
+    bash yara_rule_check.sh "$REPO_DIR"
+elif [[ "$RUN_EVAL" =~ ^[Yy] ]]; then
+    bash evaluate_code.sh "$REPO_DIR"
+else
+    echo "👋 Quitting script! Sandbox is still running in background."
+fi
