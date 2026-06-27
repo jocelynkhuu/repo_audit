@@ -56,15 +56,14 @@ echo "[*] Verifying network isolation status..."
 if podman exec $CONTAINER_NAME ping -c 1 -W 1 8.8.8.8 &>/dev/null; then
     echo -e "⚠️  WARNING: Network is STILL CONNECTED! Isolation failed."
 else
-    echo -e "✅ VERIFIED: Container network is completely dark."
+    echo -e "✅ VERIFIED: Container network is disconnected."
 fi
 
 echo "=================================================="
 echo "[+] Sandbox Initialization Complete!"
 echo "    - Destination directory inside container: /home/auditoruser/analysis/$REPO_DIR"
-echo "    - Network Status: 🚫 DISCONNECTED (Safe to triage)"
 echo "=================================================="
-echo -e "\nNext steps to execute your triage tools:"
+echo -e "\nNext steps to execute your audit tools:"
 echo "  ./yara_rule_check.sh $REPO_DIR"
 echo "  ./evaluate_code.sh $REPO_DIR"
 echo "--------------------------------------------------"
@@ -74,15 +73,35 @@ read -r RUN_YARA
 echo -n "👉 Would you like to run ./evaluate_code.sh? (y/n): "
 read -r RUN_EVAL
 
+echo -n "👉 Would you like to log the outputs to a file? (y/n): "
+read -r LOG_CHOICE
+
 echo "--------------------------------------------------"
 
-# The '^[Yy]' pattern matches any string starting with an uppercase Y or lowercase y
-if [[ "$RUN_YARA" =~ ^[Yy] && "$RUN_EVAL" =~ ^[Yy] ]]; then
-    bash yara_rule_check.sh "$REPO_DIR" && bash evaluate_code.sh "$REPO_DIR"
-elif [[ "$RUN_YARA" =~ ^[Yy] ]]; then
-    bash yara_rule_check.sh "$REPO_DIR"
-elif [[ "$RUN_EVAL" =~ ^[Yy] ]]; then
-    bash evaluate_code.sh "$REPO_DIR"
+# LOGGING INFO
+LOG_DIR="./audit_logs"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+LOG_FILE="$LOG_DIR/${REPO_DIR}_audit_${TIMESTAMP}.log"
+
+run_pipeline() {
+    # The '^[Yy]' pattern matches any string starting with an uppercase Y or lowercase y
+    if [[ "$RUN_YARA" =~ ^[Yy] && "$RUN_EVAL" =~ ^[Yy] ]]; then
+        bash yara_rule_check.sh "$REPO_DIR" && bash evaluate_code.sh "$REPO_DIR"
+    elif [[ "$RUN_YARA" =~ ^[Yy] ]]; then
+        bash yara_rule_check.sh "$REPO_DIR"
+    elif [[ "$RUN_EVAL" =~ ^[Yy] ]]; then
+        bash evaluate_code.sh "$REPO_DIR"
+    else
+        echo "👋 Quitting script! Sandbox is still running in background."
+        return 1
+    fi
+}
+
+if [[ "$LOG_CHOICE" =~ ^[Yy] ]]; then
+    mkdir -p "$LOG_DIR"
+    echo "[*] Session logging activated. Saving copy to: $LOG_FILE"
+    echo "--------------------------------------------------"
+    run_pipeline 2>&1 | tee "$LOG_FILE"
 else
-    echo "👋 Quitting script! Sandbox is still running in background."
+    run_pipeline
 fi

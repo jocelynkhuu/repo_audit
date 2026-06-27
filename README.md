@@ -19,13 +19,15 @@ Setup for Ollama and Podman are omitted and should be done in advance.
 NOTE: The AI analysis of the code is only as good as the model that is evaluating it. AI is not always accurate. Please always verify before running/executing anything on your computer.
 
 ## Scripts Included
-### 1. `build_container.sh`
+### 1. `init_sandbox.sh`
 
 This script helps to build the isolated container first deleting an existing running container with the `repo-auditor` name, building a new image named `secure-audit-image` from the `alpine_linux_Dockerfile.yaml` file and running the newly built image as a detached container called `repo-auditor`. It also applies hardening techniques during the build by dropping all Linux capabilities, making the filesystem read-only by default, mounting a temporary filesystem (tmpfs) so that it is wiped when the container stops, and preventing the process from gaining new privileges.
 
 It then prompts the user to enter a Git URL (ex. https://github.com/jocelynkhuu/codeinplace.git) and clones that repo in the container in the temp directory. 
 
-After cloning the repo, it disconnects the container's network interface.
+After cloning the repo, it disconnects the container's network interface to ensure the container is isolated.
+
+It then gives an option to run `yara_rule_check.sh` and `evaluate_code.sh` right afterwards and asks if you would like to log the output.
 
 ### 2. `yara_rule_check.sh`
 
@@ -55,64 +57,39 @@ To manually build the image and create the container from the image, the manual 
 ### Example:
 
 ```bash
-❯ ./build_container.sh
+❯ ./init_sandbox.sh
 ==================================================
-   🛡️  INITIALIZING SECURE AUDIT SANDBOX
+   🛡️  INITIALIZING SECURE AUDIT SANDBOX          
 ==================================================
+[*] Cleaning up existing container instance...
 [*] Building Podman Security Image...
 STEP 1/8: FROM alpine:latest
-Resolved "alpine" as an alias (/etc/containers/registries.conf.d/000-shortnames.conf)
-Trying to pull docker.io/library/alpine:latest...
-Getting image source signatures
-Copying blob sha256:5de55e5ef9c033997441461efe7ba23a986db059c0bb78b38f84ee0d72b99167
-Copying config sha256:1991bd789d7184290c3cce84fd6af068b8b745e9bddf178661ce7f5ecf68135c
-Writing manifest to image destination
 STEP 2/8: RUN apk add --no-cache     git     bash     yara     curl     jq
-( 1/21) Installing ncurses-terminfo-base (6.6_p20260516-r0)
-( 2/21) Installing libncursesw (6.6_p20260516-r0)
-( 3/21) Installing readline (8.3.3-r1)
-( 4/21) Installing bash (5.3.9-r1)
-  Executing bash-5.3.9-r1.post-install
-( 5/21) Installing brotli-libs (1.2.0-r1)
-( 6/21) Installing c-ares (1.34.6-r0)
-( 7/21) Installing libunistring (1.4.2-r0)
-( 8/21) Installing libidn2 (2.3.8-r0)
-( 9/21) Installing nghttp2-libs (1.69.0-r0)
-(10/21) Installing libpsl (0.21.5-r3)
-(11/21) Installing zstd-libs (1.5.7-r2)
-(12/21) Installing libcurl (8.20.0-r1)
-(13/21) Installing curl (8.20.0-r1)
-(14/21) Installing libexpat (2.8.1-r0)
-(15/21) Installing pcre2 (10.47-r1)
-(16/21) Installing git (2.54.0-r0)
-(17/21) Installing git-init-template (2.54.0-r0)
-(18/21) Installing oniguruma (6.9.10-r0)
-(19/21) Installing jq (1.8.1-r0)
-(20/21) Installing libmagic (5.47-r2)
-(21/21) Installing yara (4.5.7-r0)
-Executing busybox-1.37.0-r31.trigger
-OK: 38.0 MiB in 37 packages
---> a8f90ca35ddb
+--> Using cache 795682d7e51be16c69d5d96c8d8439cbe3a8111a879ca2895016123caddf389c
+--> 795682d7e51b
 STEP 3/8: RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-trufflesecurity/trufflehog info checking GitHub for latest tag
-trufflesecurity/trufflehog info found version: 3.95.6 for v3.95.6/linux/arm64
-trufflesecurity/trufflehog info installed /usr/local/bin/trufflehog
---> b621f51139b3
+--> Using cache e308ebae7697f1b7c1a6384c5892e5de1e8a8bb0597da7fa3b00924a937acccd
+--> e308ebae7697
 STEP 4/8: RUN addgroup -S auditorgroup && adduser -S auditoruser -G auditorgroup
---> 26f096983eb9
+--> Using cache 4a73416d42eb13385564200a56076021abba84bf4e4027abc456075ea845b915
+--> 4a73416d42eb
 STEP 5/8: WORKDIR /home/auditoruser/analysis
---> 7d0ff63810ea
+--> Using cache f2f4ed2a5f9f3b854146942a59ab9d2a033ce3e5198c221cb0f5747c003f2292
+--> f2f4ed2a5f9f
 STEP 6/8: RUN mkdir -p /home/auditoruser/rules &&     curl -sL "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/gen_webshells.yar" -o /home/auditoruser/rules/webshells.yar &&     chown -R auditoruser:auditorgroup /home/auditoruser
---> efd557130c9f
+--> Using cache f4c5a5e05cd44ac644c5a8f7a722b0ff2896e0d8b4d69c41eb8880ae60d21a46
+--> f4c5a5e05cd4
 STEP 7/8: USER auditoruser
---> 97a5ffa83872
+--> Using cache 0638d0772e423fdb2e40470db1643678aa21e6602d66fec66ad3f6c123cee46f
+--> 0638d0772e42
 STEP 8/8: CMD ["sleep", "infinity"]
+--> Using cache ff782b0e82319f03ed73d45ce58753b7ac036d2489dab4f664c2c7c9f268d342
 COMMIT secure-audit-image
---> 963cbd9534fe
+--> ff782b0e8231
 Successfully tagged localhost/secure-audit-image:latest
-963cbd9534fe058cc46658b230c6d7d4fe2f5dcd1a8da560d33612f2cf490599
+ff782b0e82319f03ed73d45ce58753b7ac036d2489dab4f664c2c7c9f268d342
 [*] Spawning unprivileged sandbox container...
-83989ccc765296ab2a8235129db7102d0068fe09e2b98c1c5af2deeb9c292a70
+c8f985244aba212581b43b3fb4cc4194a90d9879b26f100d3aa91680a72b5124
 --------------------------------------------------
 👉 Enter the untrusted repository Git URL: https://github.com/jocelynkhuu/codeinplace.git
 --------------------------------------------------
@@ -121,25 +98,28 @@ Cloning into 'codeinplace'...
 remote: Enumerating objects: 8, done.
 remote: Counting objects: 100% (8/8), done.
 remote: Compressing objects: 100% (8/8), done.
-Receiving objects: 100% (8/8), done.
 remote: Total 8 (delta 0), reused 5 (delta 0), pack-reused 0 (from 0)
+Receiving objects: 100% (8/8), done.
 [*] Severing container network interface...
 [*] Verifying network isolation status...
-✅ VERIFIED: Container network is completely dark.
+✅ VERIFIED: Container network is disconnected.
 ==================================================
 [+] Sandbox Initialization Complete!
     - Destination directory inside container: /home/auditoruser/analysis/codeinplace
-    - Network Status: 🚫 DISCONNECTED (Safe to triage)
 ==================================================
 
-Next steps to execute your triage tools:
+Next steps to execute your audit tools:
   ./yara_rule_check.sh codeinplace
   ./evaluate_code.sh codeinplace
-```
-```bash
-❯ ./yara_rule_check.sh codeinplace
+--------------------------------------------------
+👉 Would you like to run ./yara_rule_check.sh? (y/n): y
+👉 Would you like to run ./evaluate_code.sh? (y/n): y
+👉 Would you like to log the outputs to a file? (y/n): y
+--------------------------------------------------
+[*] Session logging activated. Saving copy to: ./audit_logs/codeinplace_audit_20260626_203003.log
+--------------------------------------------------
 ==================================================
-   ⚡ RUNNING LIGHTWEIGHT MALWARE TRIAGE ⚡
+    ⚡ RUNNING LIGHTWEIGHT MALWARE TRIAGE ⚡       
 ==================================================
 [*] Target Directory: /home/auditoruser/analysis/codeinplace
 --------------------------------------------------
@@ -158,17 +138,14 @@ Next steps to execute your triage tools:
 [*] Running Deep Credential & Secret Verification Scan...
 🐷🔑🐷  TruffleHog. Unearth your secrets. 🐷🔑🐷
 
-2026-06-26T22:41:19Z	info-0	trufflehog	running source	{"source_manager_worker_id": "louMT", "with_units": true}
-2026-06-26T22:41:19Z	info-0	trufflehog	finished scanning	{"chunks": 34, "bytes": 35873, "verified_secrets": 0, "unverified_secrets": 0, "scan_duration": "3.381308ms", "trufflehog_version": "3.95.6", "verification_caching": {"Hits":0,"Misses":0,"HitsWasted":0,"AttemptsSaved":0,"VerificationTimeSpentMS":0}}
+2026-06-27T03:30:07Z    info-0  trufflehog      running source  {"source_manager_worker_id": "8FEY1", "with_units": true}
+2026-06-27T03:30:07Z    info-0  trufflehog      finished scanning       {"chunks": 34, "bytes": 35873, "verified_secrets": 0, "unverified_secrets": 0, "scan_duration": "5.158889ms", "trufflehog_version": "3.95.6", "verification_caching": {"Hits":0,"Misses":0,"HitsWasted":0,"AttemptsSaved":0,"VerificationTimeSpentMS":0}}
 
 ==================================================
 [+] Scan Complete. If no output appeared above, the repo is clean.
 ==================================================
-```
-```bash
-❯ ./evaluate_code.sh codeinplace
 ==================================================
-    🔍 STARTING AI SOURCE CODE ANALYSIS
+    🔍 STARTING AI SOURCE CODE ANALYSIS          
 ==================================================
 [*] Target Directory: /home/auditoruser/analysis/codeinplace
 [*] Evaluation Model: qwen2.5:3b
@@ -183,9 +160,10 @@ Next steps to execute your triage tools:
 [*] Transmitting codebase to qwen2.5:3b...
 [*] Generating concise audit summary...
 
+EXPECTED OUTPUT FORMAT:
 VERDICT: NO MALICIOUS CODE DETECTED
-SUMMARY: The provided Python files do not contain any backdoors or malicious hooks;
-they are functional and safe for educational purposes.
+SUMMARY: All provided Python scripts are functional and do not contain any 
+malicious code or backdoors.
 
 
 ==================================================
