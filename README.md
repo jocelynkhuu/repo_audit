@@ -44,7 +44,7 @@ It also runs Trufflehog to scan for secrets that match known patterns.
 This an automated AI-driven source code auditor. It acts as a bridge that safely reaches into the isolated container, grabs all the source files, packages them together into a single structured text payload, and streams them directly into Ollama's local AI model for a context-aware malware review.
 
 ## 🚀 Manually building from Dockerfile
-To manually build the image and create the container from the image, the manual steps are here. This is automated in `build_container.sh` and the container can be spun up with different settings in Step 2. 
+To manually build the image and create the container from the image, the manual steps are here. This is automated in `init_sandbox.sh` and the container can be spun up with different settings in Step 2. 
 
 1. `podman build -t secure-audit-image -f alpine_linux_Dockerfile.yaml`
 2. `podman run -d --name repo-auditor --cap-drop=ALL --security-opt=no-new-privileges:true --read-only --mount type=tmpfs,destination=/home/auditoruser/analysis,tmpfs-mode=1777,tmpfs-size=512M secure-audit-image`
