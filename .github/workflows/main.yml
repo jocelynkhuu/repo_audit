@@ -35,7 +35,7 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main 
+        uses: trufflesecurity/trufflehog@00155c9dc586f34d189adc83d3ac2698c2ec551f # v3.95.8, git ls-remote https://github.com/trufflesecurity/trufflehog.git refs/tags/v3.95.8
         with:
-          path: ./
+          version: "3.95.8" 
           extra_args: --debug --only-verified
